@@ -6,7 +6,7 @@ QR Pay is a solo hackathon entry for the **DevCareer x Nomba Hackathon 2026**.
 
 This is a monorepo containing:
 
-- `apps/api` — NestJS backend (Prisma/PostgreSQL, BullMQ/Redis, Nomba API integration)
+- `apps/api` — NestJS backend (TypeORM/PostgreSQL, BullMQ/Redis, Nomba API integration)
 - `apps/web` — Next.js frontend (not yet scaffolded)
 
 ## Prerequisites
@@ -29,12 +29,11 @@ This is a monorepo containing:
    docker compose up -d
    ```
 
-3. Install API dependencies and run migrations:
+3. Install API dependencies:
 
    ```bash
    cd apps/api
    npm install
-   npx prisma migrate dev
    ```
 
 4. Start the API in dev mode:

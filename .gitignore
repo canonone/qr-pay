@@ -5,15 +5,11 @@ node_modules/
 dist/
 build/
 .next/
-/apps/*/generated/
 
 # env files
 .env
 .env.*
 !.env.example
-
-# prisma
-prisma/migrations/
 
 # logs
 npm-debug.log*
