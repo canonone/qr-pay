@@ -5,6 +5,8 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { Order } from './entities/order.entity';
 import { Transaction } from './entities/transaction.entity';
+import { NombaModule } from './nomba/nomba.module';
+import { OrdersModule } from './orders/orders.module';
 
 @Module({
   imports: [
@@ -22,6 +24,8 @@ import { Transaction } from './entities/transaction.entity';
         synchronize: false,
       }),
     }),
+    NombaModule,
+    OrdersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
