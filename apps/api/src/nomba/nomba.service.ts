@@ -33,11 +33,11 @@ export class NombaService {
     );
 
     const token = data.data.access_token;
-    const expiresInSeconds = data.data.expiresIn;
+    const expiresAt = new Date(data.data.expiresAt).getTime();
 
     this.tokenCache = {
       token,
-      expiresAt: Date.now() + (expiresInSeconds - 60) * 1000,
+      expiresAt: expiresAt - 60 * 1000,
     };
 
     return token;
