@@ -1,98 +1,69 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# QR Pay — Backend API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+## Overview
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+QR Pay is a privacy-preserving merchant payment infrastructure built on Nomba's virtual account and transfer APIs. Merchants generate a QR code per payment session; customers scan and pay via bank transfer. The reconciliation engine automatically handles exact payments, underpayments (top-up flow), and overpayments (auto-refund).
 
-## Description
+## Tech Stack
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- NestJS (Node.js)
+- TypeORM + PostgreSQL
+- Redis (via BullMQ, for future queue processing)
+- Nomba Virtual Account API + Transfer API
+- Docker Compose (local dev)
+- Railway (production)
 
-## Project setup
+## API Endpoints
 
-```bash
-$ npm install
-```
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /health | Health check |
+| POST | /orders | Create a payment order and provision a virtual account |
+| GET | /orders/:id | Get order details with auto-expiry check |
+| GET | /orders/:id/summary | Get full payment lifecycle timeline |
+| POST | /webhooks/nomba | Nomba webhook receiver (signature verified) |
 
-## Compile and run the project
+## Local Development Setup
 
-```bash
-# development
-$ npm run start
+1. Clone the repo
+2. Copy `apps/api/.env.example` to `apps/api/.env` and fill in values
+3. From repo root: `docker compose up -d`
+4. `cd apps/api && npm install`
+5. Run migrations: `npx typeorm-ts-node-commonjs migration:run -d src/data-source.ts`
+6. Start dev server: `npm run start:dev`
+7. API runs on `http://localhost:3001` (or `PORT` from `.env`)
 
-# watch mode
-$ npm run start:dev
+## Environment Variables
 
-# production mode
-$ npm run start:prod
-```
+| Variable | Description |
+|----------|--------------|
+| `DB_HOST` | PostgreSQL host |
+| `DB_PORT` | PostgreSQL port |
+| `DB_USERNAME` | PostgreSQL username |
+| `DB_PASSWORD` | PostgreSQL password |
+| `DB_NAME` | PostgreSQL database name |
+| `REDIS_URL` | Redis connection URL (for future BullMQ queue processing) |
+| `NOMBA_BASE_URL` | Base URL for the Nomba API (e.g. sandbox vs production) |
+| `NOMBA_CLIENT_ID` | Nomba API client ID used to obtain access tokens |
+| `NOMBA_CLIENT_SECRET` | Nomba API client secret used to obtain access tokens |
+| `NOMBA_PARENT_ACCOUNT_ID` | Nomba parent account ID sent as the `accountId` header on API calls |
+| `NOMBA_SUB_ACCOUNT_ID` | Nomba sub-account ID under which virtual accounts are provisioned |
+| `NOMBA_WEBHOOK_SECRET` | Shared secret used to verify the `nomba-signature` header on incoming webhooks |
+| `API_KEY` | Reserved for future API authentication |
+| `PORT` | Port the API server listens on |
 
-## Run tests
+## Reconciliation Logic
 
-```bash
-# unit tests
-$ npm run test
+- **Exact payment** → order marked `completed`
+- **Underpayment** → order marked `partial`, deficit logged
+- **Overpayment** → order marked `completed`, excess automatically refunded to sender's bank account via Nomba Transfer API
 
-# e2e tests
-$ npm run test:e2e
+## Security
 
-# test coverage
-$ npm run test:cov
-```
+- Webhook signature verified via HMAC-SHA256 using the `nomba-signature` header and `NOMBA_WEBHOOK_SECRET`
+- Idempotency enforced via `nombaTransactionId` uniqueness constraint on the `transactions` table
+- Credentials loaded via environment variables only, never committed to source
 
-## Deployment
+## Architecture Note
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Auth is intentionally excluded from v1 scope. Order access is controlled via unguessable UUIDs. Production readiness would require merchant accounts and scoped API keys — documented as a clear next step.
