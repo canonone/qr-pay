@@ -21,8 +21,11 @@ interface TransferToBankParams {
 export class NombaService {
   private readonly logger = new Logger(NombaService.name);
   private tokenCache: TokenCache | null = null;
+  private readonly baseUrl: string;
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(private readonly config: ConfigService) {
+    this.baseUrl = this.config.get<string>('NOMBA_BASE_URL') ?? '';
+  }
 
   private async getAccessToken(): Promise<string> {
     if (this.tokenCache && this.tokenCache.expiresAt > Date.now()) {
@@ -30,7 +33,7 @@ export class NombaService {
     }
 
     const { data } = await axios.post(
-      'https://sandbox.nomba.com/v1/auth/token/issue',
+      `${this.baseUrl}/v1/auth/token/issue`,
       {
         grant_type: 'client_credentials',
         client_id: this.config.get('NOMBA_CLIENT_ID'),
@@ -59,7 +62,7 @@ export class NombaService {
     const subAccountId = this.config.get('NOMBA_SUB_ACCOUNT_ID');
 
     const { data } = await axios.post(
-      `https://sandbox.nomba.com/v1/accounts/virtual/${subAccountId}`,
+      `${this.baseUrl}/v1/accounts/virtual/${subAccountId}`,
       { accountRef, accountName },
       {
         headers: {
@@ -77,7 +80,7 @@ export class NombaService {
       const token = await this.getAccessToken();
 
       const { data } = await axios.post<unknown>(
-        'https://sandbox.nomba.com/v1/transfers/bank',
+        `${this.baseUrl}/v1/transfers/bank`,
         params,
         {
           headers: {
