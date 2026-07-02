@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 
@@ -7,8 +7,19 @@ interface TokenCache {
   expiresAt: number;
 }
 
+interface TransferToBankParams {
+  amount: number;
+  accountNumber: string;
+  accountName: string;
+  bankCode: string;
+  merchantTxRef: string;
+  senderName: string;
+  narration: string;
+}
+
 @Injectable()
 export class NombaService {
+  private readonly logger = new Logger(NombaService.name);
   private tokenCache: TokenCache | null = null;
 
   constructor(private readonly config: ConfigService) {}
@@ -59,5 +70,27 @@ export class NombaService {
     );
 
     return data.data;
+  }
+
+  async transferToBank(params: TransferToBankParams): Promise<void> {
+    try {
+      const token = await this.getAccessToken();
+
+      const { data } = await axios.post<unknown>(
+        'https://sandbox.nomba.com/v1/transfers/bank',
+        params,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            accountId: this.config.get('NOMBA_PARENT_ACCOUNT_ID'),
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+
+      this.logger.log(`Nomba bank transfer response: ${JSON.stringify(data)}`);
+    } catch (err) {
+      this.logger.error('Nomba bank transfer failed', err);
+    }
   }
 }
