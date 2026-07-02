@@ -7,6 +7,7 @@ import { Order } from './entities/order.entity';
 import { Transaction } from './entities/transaction.entity';
 import { NombaModule } from './nomba/nomba.module';
 import { OrdersModule } from './orders/orders.module';
+import { WebhooksModule } from './webhooks/webhooks.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { OrdersModule } from './orders/orders.module';
     }),
     NombaModule,
     OrdersModule,
+    WebhooksModule,
   ],
   controllers: [AppController],
   providers: [AppService],
