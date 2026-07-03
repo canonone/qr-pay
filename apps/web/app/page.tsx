@@ -21,7 +21,6 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
 export default function Home() {
   const [view, setView] = useState<View>('form');
   const [amountExpected, setAmountExpected] = useState('');
-  const [merchantRef, setMerchantRef] = useState('');
   const [order, setOrder] = useState<Order | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -32,6 +31,8 @@ export default function Home() {
     e.preventDefault();
     setError(null);
     setLoading(true);
+
+    const merchantRef = `QRP-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
     try {
       const res = await fetch(`${API_URL}/orders`, {
@@ -61,7 +62,6 @@ export default function Home() {
   const handleCreateNew = () => {
     setView('form');
     setAmountExpected('');
-    setMerchantRef('');
     setOrder(null);
     setError(null);
     setTimeLeft(0);
@@ -143,24 +143,6 @@ export default function Home() {
                   value={amountExpected}
                   onChange={(e) => setAmountExpected(e.target.value)}
                   placeholder="1000"
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-gray-900 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="merchantRef"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Payment reference
-                </label>
-                <input
-                  id="merchantRef"
-                  type="text"
-                  required
-                  value={merchantRef}
-                  onChange={(e) => setMerchantRef(e.target.value)}
-                  placeholder="Invoice #001"
                   className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-gray-900 focus:outline-none"
                 />
               </div>
