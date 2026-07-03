@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { v4 as uuidv4 } from 'uuid';
 import { Order } from '../entities/order.entity';
 import { NombaService } from '../nomba/nomba.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -15,7 +14,7 @@ export class OrdersService {
   ) {}
 
   async createOrder(dto: CreateOrderDto): Promise<Order> {
-    const id = uuidv4();
+    const id = crypto.randomUUID();
 
     const virtualAccount = await this.nombaService.provisionVirtualAccount(
       id,
