@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
+import { formatTimeLeft } from '@/lib/format';
 
 type View = 'form' | 'qr' | 'confirmed';
 
@@ -16,13 +17,6 @@ interface Order {
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
-function formatTimeLeft(seconds: number) {
-  const clamped = Math.max(0, seconds);
-  const minutes = Math.floor(clamped / 60);
-  const secs = clamped % 60;
-  return `${minutes}:${secs.toString().padStart(2, '0')}`;
-}
 
 export default function Home() {
   const [view, setView] = useState<View>('form');
