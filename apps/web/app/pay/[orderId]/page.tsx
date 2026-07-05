@@ -7,6 +7,7 @@ type View =
   | 'loading'
   | 'confirm'
   | 'payment'
+  | 'partial'
   | 'confirmed'
   | 'expired'
   | 'error';
@@ -17,6 +18,7 @@ interface Order {
   bankName: string;
   virtualAccountNumber: string;
   amountExpected: number;
+  amountPaid?: number;
   expiresAt: string;
   status: string;
 }
@@ -49,6 +51,8 @@ export default function PayPage({
 
         if (data.status === 'completed') {
           setView('confirmed');
+        } else if (data.status === 'partial') {
+          setView('partial');
         } else if (
           data.status === 'expired' ||
           new Date() > new Date(data.expiresAt)
@@ -75,9 +79,9 @@ export default function PayPage({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Countdown timer while on the payment view
+  // Countdown timer while on the payment or partial view
   useEffect(() => {
-    if (view !== 'payment' || !order) return;
+    if ((view !== 'payment' && view !== 'partial') || !order) return;
 
     const update = () => {
       const secondsLeft = Math.round(
@@ -95,9 +99,9 @@ export default function PayPage({
     return () => clearInterval(interval);
   }, [view, order?.expiresAt]);
 
-  // Poll for payment status while on the payment view
+  // Poll for payment status while on the payment or partial view
   useEffect(() => {
-    if (view !== 'payment' || !order) return;
+    if ((view !== 'payment' && view !== 'partial') || !order) return;
 
     const interval = setInterval(async () => {
       try {
@@ -107,6 +111,8 @@ export default function PayPage({
         setOrder(data);
         if (data.status === 'completed') {
           setView('confirmed');
+        } else if (data.status === 'partial') {
+          setView('partial');
         }
       } catch {
         // ignore transient polling errors, retry next tick
@@ -194,6 +200,61 @@ export default function PayPage({
             <p className="mt-6 text-sm text-gray-600">
               Open your banking app and transfer the exact amount to the
               account above
+            </p>
+          </div>
+        )}
+
+        {view === 'partial' && order && (
+          <div className="text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-orange-100">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                className="h-7 w-7 text-orange-500"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                />
+              </svg>
+            </div>
+
+            <h1 className="mt-4 text-xl font-semibold text-gray-900">
+              Payment Incomplete
+            </h1>
+            <p className="mt-2 text-sm text-gray-600">
+              ₦{order.amountPaid ?? 0} received — ₦
+              {order.amountExpected - (order.amountPaid ?? 0)} still needed
+            </p>
+            <p className="mt-1 text-sm text-gray-600">
+              Please transfer the remaining amount to the same account
+            </p>
+
+            <div className="mt-5 space-y-1 text-sm text-gray-700">
+              <p className="font-medium">{order.bankName}</p>
+              <p className="text-2xl font-bold tracking-wide text-gray-900">
+                {order.virtualAccountNumber}
+              </p>
+              <p>{order.virtualAccountName}</p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="mt-4 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              {copied ? 'Copied!' : 'Copy account number'}
+            </button>
+
+            <p className="mt-4 text-sm text-gray-500">
+              Expires in{' '}
+              <span className="font-mono font-medium text-gray-900">
+                {formatTimeLeft(timeLeft)}
+              </span>
             </p>
           </div>
         )}

@@ -4,7 +4,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { formatTimeLeft } from '@/lib/format';
 
-type View = 'form' | 'qr' | 'confirmed';
+type View = 'form' | 'qr' | 'partial' | 'confirmed';
 
 interface Order {
   id: string;
@@ -12,6 +12,7 @@ interface Order {
   virtualAccountName: string;
   bankName: string;
   amountExpected: number;
+  amountPaid?: number;
   expiresAt: string;
   status: string;
 }
@@ -77,7 +78,7 @@ export default function Home() {
 
   // Countdown timer based on order.expiresAt
   useEffect(() => {
-    if (view !== 'qr' || !order) return;
+    if ((view !== 'qr' && view !== 'partial') || !order) return;
 
     const update = () => {
       const secondsLeft = Math.round(
@@ -93,7 +94,7 @@ export default function Home() {
 
   // Poll for payment status
   useEffect(() => {
-    if (view !== 'qr' || !order) return;
+    if ((view !== 'qr' && view !== 'partial') || !order) return;
 
     const orderId = order.id;
     const interval = setInterval(async () => {
@@ -104,6 +105,8 @@ export default function Home() {
         setOrder(data);
         if (data.status === 'completed') {
           setView('confirmed');
+        } else if (data.status === 'partial') {
+          setView('partial');
         }
       } catch {
         // ignore transient polling errors, retry next tick
@@ -113,7 +116,7 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [view, order?.id]);
 
-  const expired = view === 'qr' && timeLeft <= 0;
+  const expired = (view === 'qr' || view === 'partial') && timeLeft <= 0;
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-100 p-4">
@@ -212,6 +215,56 @@ export default function Home() {
                   : `${typeof window !== 'undefined' ? window.location.origin : ''}/pay/${order.id}`}
               </button>
             </div>
+          </div>
+        )}
+
+        {view === 'partial' && order && (
+          <div className="text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-orange-100">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                className="h-7 w-7 text-orange-500"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                />
+              </svg>
+            </div>
+
+            <h1 className="mt-4 text-xl font-semibold text-gray-900">
+              Partial Payment Received
+            </h1>
+            <p className="mt-2 text-sm text-gray-600">
+              ₦{order.amountPaid ?? 0} received of ₦{order.amountExpected} expected
+            </p>
+            <p className="mt-1 text-sm font-medium text-orange-600">
+              ₦{order.amountExpected - (order.amountPaid ?? 0)} still outstanding
+            </p>
+
+            <div className="mt-4">
+              {expired ? (
+                <p className="text-sm font-medium text-red-600">
+                  Payment window expired
+                </p>
+              ) : (
+                <p className="text-sm text-gray-500">
+                  Expires in{' '}
+                  <span className="font-mono font-medium text-gray-900">
+                    {formatTimeLeft(timeLeft)}
+                  </span>
+                </p>
+              )}
+            </div>
+
+            <p className="mt-4 text-xs text-gray-500">
+              Awaiting remaining amount…
+            </p>
           </div>
         )}
 
