@@ -5,8 +5,11 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { Transaction } from './transaction.entity';
+import { Counter } from './counter.entity';
 
 @Entity('orders')
 export class Order {
@@ -36,6 +39,16 @@ export class Order {
 
   @Column({ name: 'account_ref' })
   accountRef: string;
+
+  @Column({ name: 'payment_code', nullable: true })
+  paymentCode: string;
+
+  @Column({ name: 'counter_id', nullable: true })
+  counterId: string;
+
+  @ManyToOne(() => Counter, { nullable: true })
+  @JoinColumn({ name: 'counter_id' })
+  counter: Counter;
 
   @Column({ name: 'expires_at', type: 'timestamptz' })
   expiresAt: Date;

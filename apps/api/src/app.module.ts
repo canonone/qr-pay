@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { Order } from './entities/order.entity';
 import { Transaction } from './entities/transaction.entity';
+import { Counter } from './entities/counter.entity';
 import { NombaModule } from './nomba/nomba.module';
 import { OrdersModule } from './orders/orders.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
@@ -21,7 +22,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
         username: config.get('DB_USERNAME'),
         password: config.get('DB_PASSWORD'),
         database: config.get('DB_NAME'),
-        entities: [Order, Transaction],
+        entities: [Order, Transaction, Counter],
         synchronize: false,
       }),
     }),
