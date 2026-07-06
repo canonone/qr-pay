@@ -9,6 +9,7 @@ import { Counter } from './entities/counter.entity';
 import { NombaModule } from './nomba/nomba.module';
 import { OrdersModule } from './orders/orders.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
+import { CountersModule } from './counters/counters.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     NombaModule,
     OrdersModule,
     WebhooksModule,
+    CountersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
