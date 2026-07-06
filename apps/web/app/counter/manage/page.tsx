@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
+import { formatTimeLeft } from '@/lib/format';
 
 type View = 'setup' | 'active' | 'creating-session';
 
@@ -15,6 +16,7 @@ interface Session {
   amountExpected: number;
   virtualAccountNumber: string;
   expiresAt: string;
+  orderId: string;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -28,6 +30,9 @@ export default function CounterManagePage() {
   const [loading, setLoading] = useState(false);
   const [qrUrl, setQrUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [orderStatus, setOrderStatus] = useState('pending');
+  const [amountPaid, setAmountPaid] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(0);
 
   const handleCreateCounter = async (e: FormEvent) => {
     e.preventDefault();
@@ -81,7 +86,10 @@ export default function CounterManagePage() {
         amountExpected: data.amountExpected,
         virtualAccountNumber: data.virtualAccountNumber,
         expiresAt: data.expiresAt,
+        orderId: data.id,
       });
+      setOrderStatus('pending');
+      setAmountPaid(0);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
@@ -93,7 +101,54 @@ export default function CounterManagePage() {
     setSession(null);
     setAmount('');
     setError(null);
+    setOrderStatus('pending');
+    setAmountPaid(0);
+    setTimeLeft(0);
   };
+
+  // Countdown timer for the active session
+  useEffect(() => {
+    if (!session || orderStatus === 'completed' || orderStatus === 'expired') {
+      return;
+    }
+
+    const update = () => {
+      const secondsLeft = Math.round(
+        (new Date(session.expiresAt).getTime() - Date.now()) / 1000,
+      );
+      const clamped = Math.max(0, secondsLeft);
+      setTimeLeft(clamped);
+      if (clamped === 0) {
+        setOrderStatus('expired');
+      }
+    };
+
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [session?.expiresAt, orderStatus]);
+
+  // Poll for payment status while the session is active
+  useEffect(() => {
+    if (!session || orderStatus === 'completed' || orderStatus === 'expired') {
+      return;
+    }
+
+    const orderId = session.orderId;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`${API_URL}/orders/${orderId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        setOrderStatus(data.status);
+        setAmountPaid(Number(data.amountPaid ?? 0));
+      } catch {
+        // ignore transient polling errors, retry next tick
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [session?.orderId, orderStatus]);
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-100 p-4">
@@ -146,7 +201,55 @@ export default function CounterManagePage() {
               <QRCodeSVG value={qrUrl} size={180} />
             </div>
 
-            {session ? (
+            {session && orderStatus === 'completed' ? (
+              <div className="mt-6">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2.5}
+                    className="h-7 w-7 text-green-600"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M4.5 12.75l6 6 9-13.5"
+                    />
+                  </svg>
+                </div>
+
+                <h2 className="mt-4 text-lg font-semibold text-gray-900">
+                  Payment Received!
+                </h2>
+                <p className="mt-2 text-2xl font-semibold text-gray-900">
+                  ₦{session.amountExpected} confirmed
+                </p>
+
+                <button
+                  type="button"
+                  onClick={handleNewCode}
+                  className="mt-6 w-full rounded-lg bg-gray-900 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-800"
+                >
+                  Generate New Code
+                </button>
+              </div>
+            ) : session && orderStatus === 'expired' ? (
+              <div className="mt-6">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Session expired
+                </h2>
+
+                <button
+                  type="button"
+                  onClick={handleNewCode}
+                  className="mt-4 w-full rounded-lg bg-gray-900 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-800"
+                >
+                  Generate New Code
+                </button>
+              </div>
+            ) : session ? (
               <div className="mt-6">
                 <p className="text-sm text-gray-500">Payment Code</p>
                 <p className="mt-1 text-4xl font-bold tracking-widest text-gray-900">
@@ -163,6 +266,22 @@ export default function CounterManagePage() {
                     Expires: {new Date(session.expiresAt).toLocaleTimeString()}
                   </p>
                 </div>
+
+                {orderStatus === 'partial' && (
+                  <div className="mt-4 rounded-lg bg-orange-50 p-3 text-left text-sm text-orange-700">
+                    <p>⚠ Partial payment received</p>
+                    <p>
+                      ₦{amountPaid} of ₦{session.amountExpected} received
+                    </p>
+                  </div>
+                )}
+
+                <p className="mt-4 text-sm text-gray-500">
+                  Expires in{' '}
+                  <span className="font-mono font-medium text-gray-900">
+                    {formatTimeLeft(timeLeft)}
+                  </span>
+                </p>
 
                 {error && (
                   <p className="mt-3 text-sm text-red-600">{error}</p>
