@@ -12,6 +12,7 @@ interface Order {
   virtualAccountName: string;
   bankName: string;
   amountExpected: number;
+  amountPaid: string;
   expiresAt: string;
   status: string;
 }
@@ -238,9 +239,18 @@ export default function Home() {
               Payment Confirmed!
             </h1>
             <p className="mt-2 text-2xl font-semibold text-gray-900">
-              ₦{order.amountExpected}
+              ₦{order.amountExpected} received
             </p>
-            <p className="text-sm text-gray-500">Amount received</p>
+
+            {Number(order.amountPaid) > order.amountExpected && (
+              <div className="mt-4 rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
+                <p>₦{order.amountPaid} total received</p>
+                <p>
+                  ₦{Number(order.amountPaid) - order.amountExpected} excess
+                  automatically refunded to customer
+                </p>
+              </div>
+            )}
 
             <button
               type="button"
