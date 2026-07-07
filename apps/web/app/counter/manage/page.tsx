@@ -227,6 +227,16 @@ export default function CounterManagePage() {
                   ₦{session.amountExpected} confirmed
                 </p>
 
+                {amountPaid > session.amountExpected && (
+                  <div className="mt-4 rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
+                    <p>₦{amountPaid} total received</p>
+                    <p>
+                      ₦{amountPaid - session.amountExpected} excess
+                      automatically refunded to customer
+                    </p>
+                  </div>
+                )}
+
                 <button
                   type="button"
                   onClick={handleNewCode}
